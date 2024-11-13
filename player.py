@@ -5,13 +5,15 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.sprite = pygame.image.load(sprite_image)
         self.sprite = pygame.transform.scale(self.sprite, size)
-        self.rect = self.sprite.get_rect(topleft=(x, y))
+        self.rect = self.sprite.get_rect(topleft=(world_x, world_y))
         self.direction = pygame.math.Vector2(0, 0)
         self.speed = 8
         self.gravity = 0.5
         self.jump_speed = 15
         self.max_jumps = 2
         self.jumpCounter = 0
+        self.x = x
+        self.y = y
         self.world_x = world_x
         self.world_y = world_y
         self.on_ground = False
@@ -46,10 +48,10 @@ class Player(pygame.sprite.Sprite):
         else:
             self.direction.x = 0
         
-        if keys[pygame.K_SPACE]:
+        if keys[pygame.K_SPACE] or keys[pygame.K_UP]:
             if not self.jumping:
                 self.jump()
-        if not keys[pygame.K_SPACE]:
+        if not keys[pygame.K_SPACE] and not keys[pygame.K_UP]:
             self.jumping = False
     
     def apply_gravity(self):

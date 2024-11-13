@@ -8132,7 +8132,7 @@
 						},
 						{
 							"__identifier": "Player",
-							"__grid": [25,26],
+							"__grid": [33,33],
 							"__pivot": [0,0],
 							"__tags": [],
 							"__tile": { "tilesetUid": 17, "x": 64, "y": 64, "w": 384, "h": 704 },
@@ -8141,10 +8141,10 @@
 							"width": 128,
 							"height": 128,
 							"defUid": 13,
-							"px": [1600,1664],
+							"px": [2112,2112],
 							"fieldInstances": [{ "__identifier": "Is_Spawned", "__type": "Bool", "__value": false, "__tile": null, "defUid": 39, "realEditorValues": [] }],
-							"__worldX": -28416,
-							"__worldY": 4800
+							"__worldX": -27904,
+							"__worldY": 5248
 						}
 					]
 				},
@@ -17439,7 +17439,7 @@
 						},
 						{
 							"__identifier": "Player",
-							"__grid": [53,29],
+							"__grid": [35,33],
 							"__pivot": [0,0],
 							"__tags": [],
 							"__tile": { "tilesetUid": 17, "x": 64, "y": 64, "w": 384, "h": 704 },
@@ -17448,10 +17448,10 @@
 							"width": 128,
 							"height": 128,
 							"defUid": 13,
-							"px": [3392,1856],
+							"px": [2240,2112],
 							"fieldInstances": [{ "__identifier": "Is_Spawned", "__type": "Bool", "__value": false, "__tile": null, "defUid": 39, "realEditorValues": [] }],
-							"__worldX": -51200,
-							"__worldY": 4992
+							"__worldX": -52352,
+							"__worldY": 5248
 						}
 					]
 				},
