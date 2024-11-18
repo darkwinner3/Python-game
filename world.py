@@ -118,9 +118,9 @@ class Level1:
             
         self.load_map(camera)
         
-        print(self.tiles_by_level)
+        #print(self.tiles_by_level)
         
-        # print(self.player.sprite.rect.x)
+        #print(self.player.sprite.rect.x)
         
         # Draw player if present
         if self.player:
