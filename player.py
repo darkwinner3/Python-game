@@ -1,7 +1,7 @@
 import pygame
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, world_x, world_y, sprite_image, size, current_level):
+    def __init__(self, x, y, world_x, world_y, sprite_image, size, is_Spawned):
         super().__init__()
         self.sprite = pygame.image.load(sprite_image)
         self.sprite = pygame.transform.scale(self.sprite, size)
@@ -18,7 +18,7 @@ class Player(pygame.sprite.Sprite):
         self.world_y = world_y
         self.on_ground = False
         self.jumping = False
-        self.current_level = current_level
+        self.is_Spawned = is_Spawned
     
     # Movement
     def moveLeft(self):
@@ -53,7 +53,32 @@ class Player(pygame.sprite.Sprite):
                 self.jump()
         if not keys[pygame.K_SPACE] and not keys[pygame.K_UP]:
             self.jumping = False
+            
+    def vertical_movement_collision(self, tiles):
+        for tile in tiles:
+            if tile.rect.colliderect(self.rect):
+                if self.direction.y > 0:  # Moving down
+                    self.rect.bottom = tile.rect.top
+                    self.direction.y = 0
+                    self.on_ground = True
+                    self.jumpCounter = 0
+                elif self.direction.y < 0:  # Moving up
+                    self.rect.top = tile.rect.bottom
+                self.direction.y = 0
+            if self.on_ground and self.direction.y > 1 or self.direction.y < 0:
+                self.on_ground = False
+        
     
+    def horizontal_movement_collision(self, tiles):
+        self.rect.x += self.direction.x * self.speed
+        
+        for tile in tiles:
+            if tile.rect.colliderect(self.rect):
+                if self.direction.x > 0:
+                    self.rect.right = tile.rect.left
+                elif self.direction.x < 0:
+                    self.rect.left = tile.rect.right
+        
     def apply_gravity(self):
         self.direction.y += self.gravity
         self.rect.y += self.direction.y

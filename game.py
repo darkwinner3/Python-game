@@ -1,7 +1,7 @@
 import pygame, sys, json
 from pygame.locals import*
 from player import Player
-from world import Level1
+from world import World
 from tile import *
 
 class Game():
@@ -22,7 +22,7 @@ class Game():
         self.fpsClock = pygame.time.Clock()
 
         # level init
-        self.level = Level1(self.screen, self.display)
+        self.level = World(self.screen, self.display)
         
             
     def run(self):

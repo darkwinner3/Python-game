@@ -7,7 +7,7 @@ with open("level1-map.json") as f:
             level_data = json.load(f)
 f.close()
 
-class Level1:
+class World:
     def __init__(self, screen, display):
         self.levels = level_data['levels']
         self.player = pygame.sprite.GroupSingle()
@@ -29,42 +29,45 @@ class Level1:
         
         self.x_shift = 0
         self.y_shift = 0
+        
+    
+    def run(self):
+        self.display.fill(self.SKYCOLOR)
+        
+        if self.player.sprite:
+            player = self.player.sprite
+            tiles = [tile for level_id, level_tiles in self.tiles_by_level.items() for tile in level_tiles.sprites()]
             
-    def vertical_movement_collision(self):
-        player = self.player.sprite
-        
-        if player:
             player.apply_gravity()
+            player.vertical_movement_collision(tiles)
+            player.horizontal_movement_collision(tiles)
         
-            for level_id, level_tiles in self.tiles_by_level.items():
+        for level_id, level_tiles in self.tiles_by_level.items():
                 for sprite in level_tiles.sprites():
-                    if sprite.rect.colliderect(player.rect):
-                        if player.direction.y > 0:  # Moving down
-                            player.rect.bottom = sprite.rect.top
-                            player.direction.y = 0
-                            player.on_ground = True
-                            player.jumpCounter = 0
-                        elif player.direction.y < 0:  # Moving up
-                            player.rect.top = sprite.rect.bottom
-                        player.direction.y = 0
-                    if player.on_ground and player.direction.y > 1 or player.direction.y < 0:
-                        player.on_ground = False
+                    sprite.update(self.x_shift, self.y_shift)
+                    
+        self.player.update()
+        self.npc.update()
         
-    
-    def horizontal_movement_collision(self):
-        player = self.player.sprite
-        if player:
-            player.rect.x += player.direction.x * player.speed
+        self.load_nearby_levels(self.player.sprite.rect.x, self.player.sprite.rect.y, self.display)
         
-            for level_id, level_tiles in self.tiles_by_level.items():
-                for sprite in level_tiles.sprites():
-                    if sprite.rect.colliderect(player.rect):
-                        if player.direction.x > 0:
-                            player.rect.right = sprite.rect.left
-                        elif player.direction.x < 0:
-                            player.rect.left = sprite.rect.right
+        map_left, map_right, map_top, map_bottom = self.calculate_map_boundaries()
         
-    
+        if self.player:
+            camera = self.upate_camera(map_left, map_right, map_top, map_bottom)
+            
+        self.load_map(camera)
+        
+        # Draw player if present
+        if self.player:
+            self.player.sprite.draw(self.display, camera)
+
+        # Draw NPCs if they exist
+        if self.npc:
+            self.npc.sprite.draw(self.display, camera)
+            
+        self.draw(self.screen)
+        
     def calculate_map_boundaries(self):
         map_left = float('inf')
         map_right = float('-inf')
@@ -81,57 +84,24 @@ class Level1:
             map_bottom = max(map_bottom, level_y + level_height)
             
         return map_left, map_right, map_top, map_bottom
-        
     
-    def run(self):
-        self.display.fill(self.SKYCOLOR)
+    def upate_camera(self, map_left, map_right, map_top, map_bottom):
+        camera_x = -self.player.sprite.rect.centerx + self.display.get_rect().centerx
         
-        self.vertical_movement_collision()
-        self.horizontal_movement_collision()
-        
-        
-        for level_id, level_tiles in self.tiles_by_level.items():
-                for sprite in level_tiles.sprites():
-                    sprite.update(self.x_shift, self.y_shift)
-        self.player.update()
-        self.npc.update()
-        
-        self.load_nearby_levels(self.player.sprite.rect.x, self.player.sprite.rect.y, self.display)
-        
-        map_left, map_right, map_top, map_bottom = self.calculate_map_boundaries()
-        if self.player:
-            camera_x = -self.player.sprite.rect.centerx + self.display.get_rect().centerx
-        
-            if self.player.sprite.rect.centerx < map_left + self.display.get_rect().centerx:
-                camera_x = -map_left
-            if self.player.sprite.rect.centerx > map_right - self.display.get_rect().centerx:
-                camera_x = -(map_right - self.display.get_rect().width)
+        if self.player.sprite.rect.centerx < map_left + self.display.get_rect().centerx:
+            camera_x = -map_left
+        if self.player.sprite.rect.centerx > map_right - self.display.get_rect().centerx:
+            camera_x = -(map_right - self.display.get_rect().width)
                 
-            camera_y = -self.player.sprite.rect.centery + self.display.get_rect().centery
+        camera_y = -self.player.sprite.rect.centery + self.display.get_rect().centery
             
-            if self.player.sprite.rect.centery < map_top + self.display.get_rect().centery:
-                camera_y = -map_top
-            if self.player.sprite.rect.centery > map_bottom - self.display.get_rect().centery:
-                camera_y = -(map_bottom - self.display.get_rect().height)
+        if self.player.sprite.rect.centery < map_top + self.display.get_rect().centery:
+            camera_y = -map_top
+        if self.player.sprite.rect.centery > map_bottom - self.display.get_rect().centery:
+            camera_y = -(map_bottom - self.display.get_rect().height)
                 
-            camera = (camera_x, camera_y)
+        return (camera_x, camera_y)
             
-        self.load_map(camera)
-        
-        #print(self.tiles_by_level)
-        
-        #print(self.player.sprite.rect.x)
-        
-        # Draw player if present
-        if self.player:
-            self.player.sprite.draw(self.display, camera)
-
-        # Draw NPCs if they exist
-        if self.npc:
-            self.npc.sprite.draw(self.display, camera)
-            
-        self.draw(self.screen)
-        
     def load_nearby_levels(self, player_x, player_y, display, range_x = 24577, range_y = 12289):
         # unlaod levels based on player position
         self.loaded_levels = [level for level in self.loaded_levels if self.is_within_range(level, player_x, player_y, range_x, range_y)]
@@ -235,16 +205,12 @@ class Level1:
         level_id = self.level['identifier']
         
         if level_id not in self.tiles_by_level:
-            tiles = pygame.sprite.Group()
+            tiles = self.load_tiles()
             
             self.load_entities()
-            self.load_tiles(tiles)
             self.tiles_by_level[level_id] = tiles
 
-        self.SKYCOLOR = (135, 206, 235)
-        
-        
-    
+        self.SKYCOLOR = (135, 206, 235)  
     
     def draw(self, screen):
         screen.blit(self.display, (0, 0))
@@ -254,42 +220,19 @@ class Level1:
         for level_id, level_tiles in self.tiles_by_level.items():
                 for sprite in level_tiles.sprites():
                     sprite.draw(self.display, camera)
-
-    def load_tiles(self, tiles):
-        # Extract the tile layer and load the tileset image
+    
+    def load_tiles(self):
         self.tile_layer = next(layer for layer in self.level['layerInstances'] if layer['__identifier'] == 'Tiles')
         self.autoTile_layer = next(layer for layer in self.level['layerInstances'] if layer['__identifier'] == 'IntGrid')
         self.tileset_image = pygame.image.load(self.tile_layer['__tilesetRelPath']).convert_alpha()
         self.autoTileset_image = pygame.image.load(self.autoTile_layer['__tilesetRelPath']).convert_alpha()
         
-        # Loop through gridTiles and create Tile objects
-        for tile_data in self.tile_layer['gridTiles']:
-            self.tile_size = self.tile_layer['__gridSize']
-            
-            # pixel position
-            tile_px_x, tile_px_y = tile_data["px"]
-            
-            # world position
-            tile_world_x = tile_px_x + self.level['worldX']
-            tile_world_y = tile_px_y + self.level['worldY']
-            
-            # image source
-            src = tile_data['src']
-            
-            tile_sprite = Tile((tile_world_x, tile_world_y), src, self.tileset_image, self.tile_size)  # Create Tile sprite
-            tiles.add(tile_sprite)
+        world_offset = (self.level['worldX'], self.level['worldY'])
         
-        for tile_data in self.autoTile_layer['autoLayerTiles']:
-            self.autoTile_size = self.autoTile_layer['__gridSize']
-            # pixel position
-            tile_px_x, tile_px_y = tile_data["px"]
-            
-            # world position
-            tile_world_x = tile_px_x + self.level['worldX']
-            tile_world_y = tile_px_y + self.level['worldY']
-            
-            src = tile_data['src']
-            tile_sprite = Tile((tile_world_x, tile_world_y), src, self.autoTileset_image, self.autoTile_size)
-            tiles.add(tile_sprite)
+        tiles = Tile.load_from_layer(self.tile_layer, self.autoTile_layer, self.tileset_image, self.autoTileset_image, world_offset)
+        
+        return tiles
+
+    
         
     
