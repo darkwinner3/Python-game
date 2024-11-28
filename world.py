@@ -3,13 +3,10 @@ from tile import Tile
 from player import Player
 from npc import NPC
 
-with open("level1-map.json") as f:
-            level_data = json.load(f)
-f.close()
-
 class World:
-    def __init__(self, screen, display):
-        self.levels = level_data['levels']
+    def __init__(self, screen, display, level_data):
+        self.level_data = level_data
+        self.levels = self.level_data['levels']
         self.player = pygame.sprite.GroupSingle()
         
         self.loaded_levels = []
@@ -177,7 +174,7 @@ class World:
         
             
         character_spritesheet_path = next(
-            (tileset.get("relPath") for tileset in level_data.get("defs", {}).get("tilesets", []) if tileset.get("identifier") == "CharacterSprite"),
+            (tileset.get("relPath") for tileset in self.level_data.get("defs", {}).get("tilesets", []) if tileset.get("identifier") == "CharacterSprite"),
             None
         )
         
