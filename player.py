@@ -7,6 +7,9 @@ class Player(pygame.sprite.Sprite):
         self.sprite = pygame.transform.scale(self.sprite, size)
         self.rect = self.sprite.get_rect(topleft=(world_x, world_y))
         self.direction = pygame.math.Vector2(0, 0)
+        
+        self.health = 1000
+        
         self.speed = 8
         self.gravity = 0.5
         self.jump_speed = 15
