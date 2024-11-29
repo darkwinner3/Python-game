@@ -230,6 +230,8 @@ class World:
         
         return tiles
 
-    
+    def update_resolution(self, width, height, screen):
+        self.screen = screen
+        self.display = pygame.Surface((width, height), pygame.SRCALPHA)
         
     
