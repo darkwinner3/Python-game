@@ -131,12 +131,35 @@ class World:
         
         self.load_level(self.current_level, display)
     
-    def load_level(self, level, display): 
+    def load_level(self, level, display):
+        print(f"Current level fddfd after change: {self.current_level['identifier']}")
         self.level = level
         self.setup_level(display)
+        
+        print(f"Player initial world position: ({self.player_initial_world_x}, {self.player_initial_world_y})")
+        print(f"Player rect after creation: {self.player.sprite.rect}")
         self.loaded_levels.append(level)    
 
-    
+    def extract_animation_data(self, animation_entity, tileset_path):
+        frames = []
+        for frame_data in animation_entity["fieldInstances"][0]["__value"]:
+            frames.append({
+                "x": frame_data["x"],
+                "y": frame_data["y"],
+                "w": frame_data["w"],
+                "h": frame_data["h"],
+            })
+        
+        rate = next((field["__value"] for field in animation_entity["fieldInstances"] if field["__identifier"] == "animation_rate"), 1)
+        mode = next((field["__value"] for field in animation_entity["fieldInstances"] if field["__identifier"] == "animationMode"), "Loop")  
+        
+        return {
+            "tileset_path": tileset_path,
+            "frames": frames,
+            "rate": rate,
+            "mode": mode
+        }
+          
     def load_entities(self):
         
         self.npc = pygame.sprite.GroupSingle()
@@ -149,8 +172,11 @@ class World:
                             if field["__value"] == False:
                                 self.player_data = entity
                                 self.Is_Spawned = True
-                if entity["__identifier"] == "Npc":
+                elif entity["__identifier"] == "Npc":
                     self.npc_data = entity
+                elif entity["__identifier"] == "Player_animation":
+                    self.player_animation_entity = entity
+                    
             if self.player_data:
                 self.player_initial_x, self.player_initial_y = self.player_data["px"]
                 self.player_initial_world_x = self.current_level['worldX'] + self.player_initial_x
@@ -161,7 +187,16 @@ class World:
             else:
                 self.player_initial_x, self.player_initial_y = 0, 0
                 self.size = (0, 0)
-                
+            
+            animation_data = None
+            if self.player_animation_entity:
+                animation_path = next(
+                    (tileset.get("relPath") for tileset in self.level_data.get("defs", {}).get("tilesets", []) if tileset.get("identifier") == "Animation"),
+                    None
+                )
+                if animation_path:
+                    animation_data = self.extract_animation_data(self.player_animation_entity, animation_path)
+                    
             if self.npc_data:
                 self.npc_initial_x, self.npc_initial_y = self.npc_data["px"]
                 self.npc_width = self.npc_data.get("width", 0)
@@ -170,8 +205,6 @@ class World:
             else:
                 self.npc_initial_x, self.npc_initial_y = 0, 0
                 self.size = (0, 0)
-        
-        
             
         character_spritesheet_path = next(
             (tileset.get("relPath") for tileset in self.level_data.get("defs", {}).get("tilesets", []) if tileset.get("identifier") == "CharacterSprite"),
@@ -191,7 +224,7 @@ class World:
         local_y = world_y - self.current_level['worldY']
         
         if not self.player.sprite:  # Only create a new player if one doesn't already exist
-            player = Player(local_x, local_y, world_x, world_y, character_spritesheet_path, self.player_size, self.Is_Spawned)
+            player = Player(local_x, local_y, world_x, world_y, self.player_size, self.Is_Spawned, animation_data)
             self.player.add(player)
             
         if self.npc_data:
@@ -201,11 +234,16 @@ class World:
     def setup_level(self, display):
         level_id = self.level['identifier']
         
+        print("false")
         if level_id not in self.tiles_by_level:
+            print("true")
             tiles = self.load_tiles()
             
             self.load_entities()
             self.tiles_by_level[level_id] = tiles
+        else:
+            print("true")
+            self.load_entities()
 
         self.SKYCOLOR = (135, 206, 235)  
     
