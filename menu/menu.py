@@ -2,11 +2,13 @@ import pygame, sys
 from menu.button import Button
 
 class Menu():
-    def __init__(self, display_width, display_height, screen, game):
+    def __init__(self, display_width, display_height, screen, display, game, level):
         TEXT_COL = (255, 255, 255)
 
+        self.level = level
         self.game = game
         self.screen = screen
+        self.display = display
         self.display_width, self.display_height = (display_width, display_height)
         self.game_paused = False
         self.menu_state = "main"
@@ -196,6 +198,20 @@ class Menu():
 
                 # Update the button position
                 button.rect.topleft = (x, y)
+                
+    def get_clicked_level(self, levelID):
+        chosen_level = self.level.get_level_by_id(levelID)
+        
+        self.level.current_level = chosen_level
+        
+        print(f"Current level after change: {self.level.current_level['identifier']}")
+        print(f"Current level after change: {chosen_level['identifier']}")
+        self.level.player_data = None
+        
+        self.level.player = pygame.sprite.GroupSingle()
+        
+        self.level.load_level(chosen_level, self.display)
+        
 
     def handle_button_click(self, button_name):
         if self.menu_state == "main":
@@ -233,29 +249,29 @@ class Menu():
         
         elif self.menu_state == "levels":
             if button_name == "level1":
-                print("lol")
+                self.get_clicked_level("Level_1")
             elif button_name == "level2":
-                print("lol")
+                self.get_clicked_level("Level_2")
             elif button_name == "level3":
-                print("lol")
+                self.get_clicked_level("Level_3")
             elif button_name == "level4":
-                print("lol")
+                self.get_clicked_level("Level_4")
             elif button_name == "level5":
-                print("lol")
+                self.get_clicked_level("Level_5")
             elif button_name == "level6":
-                print("lol")
+                self.get_clicked_level("Level_6")
             elif button_name == "level7":
-                print("lol")
+                self.get_clicked_level("Level_7")
             elif button_name == "level8":
-                print("lol")
+                self.get_clicked_level("Level_8")
             elif button_name == "level9":
-                print("lol")
+                self.get_clicked_level("Level_9")
             elif button_name == "level10":
-                print("lol")
+                self.get_clicked_level("Level_10")
             elif button_name == "level11":
-                print("lol")
+                self.get_clicked_level("Level_11")
             elif button_name == "level12":
-                print("lol")
+                self.get_clicked_level("Level_0")
             
                 
         
