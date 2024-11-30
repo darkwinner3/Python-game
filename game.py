@@ -24,11 +24,11 @@ class Game():
         self.FPS = 60
         self.fpsClock = pygame.time.Clock()
 
-        # menu
-        self.menu = Menu(DISPLAY_W, DISPLAY_H, self.screen, self)
-        
         # level init
         self.level = World(self.screen, self.display, self.level_data)
+        
+        # menu
+        self.menu = Menu(DISPLAY_W, DISPLAY_H, self.screen, self.display, self, self.level)
     
     def change_screen_size(self, width, height):
         # Update screen and display
