@@ -2,6 +2,7 @@ import pygame, sys, json, os
 from pygame.locals import*
 from menu.menu import Menu
 from world import World
+from utils import load_image, load_images, load_tileset_images, Animation
 from tile import *
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
@@ -21,11 +22,16 @@ class Game():
         
         self.screen = pygame.display.set_mode((DISPLAY_W, DISPLAY_H))
         self.display = pygame.Surface((DISPLAY_W, DISPLAY_H), pygame.SRCALPHA)
-        self.FPS = 60
+        self.FPS = 120
         self.fpsClock = pygame.time.Clock()
+        
+        self.assets = {
+            'player': load_image('characterSprite.png'),
+            'player/idle': Animation(load_tileset_images('Player/Animation.png', self.level_data), img_dur=1),
+        }
 
         # level init
-        self.level = World(self.screen, self.display, self.level_data)
+        self.level = World(self, self.screen, self.display, self.level_data)
         
         # menu
         self.menu = Menu(DISPLAY_W, DISPLAY_H, self.screen, self.display, self, self.level)
@@ -42,12 +48,6 @@ class Game():
             
     def run(self):
         while True:
-            
-            if self.menu.game_paused:
-                self.menu.run(self.screen)
-            else:
-                self.level.run()
-            
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     self.menu.menu_state = "main"
@@ -64,9 +64,11 @@ class Game():
                     pygame.quit()
                     sys.exit()
                 
+            if self.menu.game_paused:
+                self.menu.run(self.screen)
+            else:
+                self.level.run()
             
-                
-                
             pygame.display.update()
                 
             # fps control
