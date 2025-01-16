@@ -1,135 +1,75 @@
 import pygame
+from physicsEntity import PhysicsEntity
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, world_x, world_y, size, is_Spawned, animation_data = None):
-        super().__init__()
-        # self.sprite = pygame.image.load(sprite_image)
-        # self.sprite = pygame.transform.scale(self.sprite, size)
-        # self.rect = self.sprite.get_rect(topleft=(world_x, world_y))
-        # self.direction = pygame.math.Vector2(0, 0)
+class Player(PhysicsEntity, pygame.sprite.Sprite):
+    def __init__(self, game, local_pos, world_pos, size, is_Spawned):
+        super().__init__(game, 'player', world_pos, size, local_pos)
+        pygame.sprite.Sprite.__init__(self)
         
-        self.sprite_size = size
-        self.sprite = pygame.Surface(size)
-        self.rect = self.sprite.get_rect(topleft=(world_x, world_y))
+        self.speed_increment = 2.2
+        self.air_time = 0
+        self.doubleJump = True
+        self.jumping = False
+        self.current_jumps = 0
+        self.max_jumps = 2
+        self.jump_speed = 5.5
+        self.dashing = 0
+        self.grounded_timer = 0
+        
+        self.movement = [False, False]
         
         self.health = 1000
         
-        self.dash_length = 50
-        self.is_dashed = False
-        self.dash_cooldown = 0
-        self.dash_timer = 0
-        self.dash_duration = 20
-        self.dash_increment = 0
-        
-        self.speed = 10
-        
-        self.gravity = 0.5
-        self.jump_speed = 15
-        self.max_jumps = 2
-        self.jumpCounter = 0
-        self.on_ground = False
-        self.jumping = False
-        
-        self.x = x
-        self.y = y
-        self.world_x = world_x
-        self.world_y = world_y
-        
-        self.direction = pygame.Vector2(0, 0)
-        self.animation_frames = []
-        self.current_frame = 0
-        self.animation_rate = 1
-        self.animtaion_counter = 0
-        self.animation_mode = "Loop"
-        
-        if animation_data:
-            self.load_animation(animation_data)
+        self.x, self.y = local_pos
+        self.world_x, self.world_y = world_pos
         
         self.is_Spawned = is_Spawned
-    
-    def load_animation(self, animation_data):
-        self.animation_frames = []
-        tileset = pygame.image.load(animation_data["tileset_path"]).convert_alpha()
-        
-        for frame in animation_data["frames"]:
-            x, y, w, h = frame["x"], frame["y"], frame["w"], frame["h"]
-            frame_surface = pygame.Surface((w, h), pygame.SRCALPHA)
-            frame_surface.blit(tileset, (0, 0), (x, y, w, h))
-            self.animation_frames.append(frame_surface)
-            
-        self.animation_rate = animation_data["rate"]
-        self.animation_mode = animation_data["mode"]
-        
-        self.animation_frames = [
-            pygame.transform.scale(frame, self.sprite_size) for frame in self.animation_frames
-        ]
-        
-        if self.animation_frames:
-            self.sprite = self.animation_frames[0]
-    
-    def update_animation(self):
-        if self.animation_frames:
-            self.animtaion_counter += 1
-            if self.animtaion_counter >= self.animation_rate:
-                self.animtaion_counter = 0
-                self.current_frame += 1
                 
-                if self.current_frame >= len(self.animation_frames):
-                    if self.animation_mode == "Loop":
-                        self.current_frame = 0
-                    else:
-                        self.current_frame = len(self.animation_frames) - 1
-                
-                self.sprite = self.animation_frames[self.current_frame]
-                
-    # Movement
-    def moveLeft(self):
-        if self.dash_timer > 0:
-            self.direction.x = -self.dash_increment
-            self.dash_timer -= 1
-        else:
-            self.direction.x = -1
-            if self.is_dashed and self.dash_cooldown <= 0:
-                self.start_dash(-1)
-        
-    def moveRight(self):
-        if self.dash_timer > 0:
-            self.direction.x = self.dash_increment
-            self.dash_timer -= 1
-        else:
-            self.direction.x = 1
-            if self.is_dashed and self.dash_cooldown <= 0:
-                self.start_dash(1)
+    def dash(self):
+        if not self.dashing:
+            if self.flip:
+                self.dashing = -100
+            else:
+                self.dashing = 100
     
-    def start_dash(self, direction):
-        self.dash_timer = self.dash_duration
-        self.dash_increment = self.dash_length / self.dash_duration
-        self.direction.x = direction * self.dash_increment
-        print(self.is_dashed)
-        self.is_dashed = False
-        self.dash_cooldown = 80
-       
     def jump(self):
-        if self.on_ground:
-            self.direction.y = -self.jump_speed
-            self.jumpCounter = 1
-            self.on_ground = False
+        
+        if self.grounded_timer > 3 and self.current_jumps == 0:  # Assume 3 frames of being in the air means a fall
+            self.doubleJump = False
+            self.current_jumps = 1
+        
+        if not self.doubleJump and self.current_jumps < self.max_jumps:
+            self.current_jumps += 1
+            self.velocity.y = -self.jump_speed
+            self.air_time = 5.5
             self.jumping = True
-        elif self.jumpCounter < self.max_jumps:
-            self.direction.y = -self.jump_speed
-            self.jumpCounter += 1
+        elif self.doubleJump and self.current_jumps < self.max_jumps:  # Player is airborne
+            self.current_jumps += 1
+            self.velocity.y = -self.jump_speed
+            self.air_time = 5.5
             self.jumping = True
+            
+            
     
     def handle_input(self):
         keys = pygame.key.get_pressed()
         
         if keys[pygame.K_RIGHT]:
-            self.moveRight()
-        elif keys[pygame.K_LEFT]:
-            self.moveLeft()
-        else:
-            self.direction.x = 0
-        
+            if not self.movement[1]:  # Start moving right
+                self.movement[1] = True
+            self.velocity.x = self.speed_increment  # Set positive velocity for right movement
+        elif not keys[pygame.K_RIGHT] and self.movement[1]:  # Stop moving right
+            self.movement[1] = False
+            self.velocity.x = 0
+            
+        if keys[pygame.K_LEFT]:
+            if not self.movement[0]:  # Start moving left
+                self.movement[0] = True
+            self.velocity.x = -self.speed_increment  # Set negative velocity for left movement
+        elif not keys[pygame.K_LEFT] and self.movement[0]:  # Stop moving left
+            self.movement[0] = False
+            self.velocity.x = 0
+
         if keys[pygame.K_SPACE] or keys[pygame.K_UP]:
             if not self.jumping:
                 self.jump()
@@ -137,47 +77,45 @@ class Player(pygame.sprite.Sprite):
             self.jumping = False
         
         if keys[pygame.K_LSHIFT]:
-            self.is_dashed = True
-        elif not keys[pygame.K_LSHIFT]:
-            self.is_dashed = False
-        
-        if self.dash_cooldown > 0:
-            self.dash_cooldown -= 1
-        
-    def vertical_movement_collision(self, tiles):
-        for tile in tiles:
-            if tile.rect.colliderect(self.rect):
-                if self.direction.y > 0:  # Moving down
-                    self.rect.bottom = tile.rect.top
-                    self.direction.y = 0
-                    self.on_ground = True
-                    self.jumpCounter = 0
-                elif self.direction.y < 0:  # Moving up
-                    self.rect.top = tile.rect.bottom
-                self.direction.y = 0
-            if self.on_ground and self.direction.y > 1 or self.direction.y < 0:
-                self.on_ground = False
-        
+            self.dash()
     
-    def horizontal_movement_collision(self, tiles):
-        self.rect.x += self.direction.x * self.speed
+    def update(self, tilemap, movement=(0, 0)):
+        super().update(tilemap, movement=movement)
         
-        for tile in tiles:
-            if tile.rect.colliderect(self.rect):
-                if self.direction.x > 0:
-                    self.rect.right = tile.rect.left
-                elif self.direction.x < 0:
-                    self.rect.left = tile.rect.right
+        self.air_time += 1
         
-    def apply_gravity(self):
-        self.direction.y += self.gravity
-        self.rect.y += self.direction.y
-    
-    def update(self):
+        if not self.collisions['down']:
+            self.grounded_timer += 1
+        else:
+            self.grounded_timer = 0  # Reset timer if grounded
+        
+        
+        if self.collisions['down']:
+            self.air_time = 0
+            self.current_jumps = 0
+            self.doubleJump = True
+            
+            
         self.handle_input()
-        self.update_animation()
+        
+        # print(self.current_jumps)
+        
+        if self.dashing > 0:
+            self.dashing = max(0, self.dashing - 1)
+        if self.dashing < 0:
+            self.dashing = min(0, self.dashing + 1)
+        if abs(self.dashing) > 50:
+            self.velocity.x = abs(self.dashing) / self.dashing * 8
+            if abs(self.dashing) == 51:
+                self.velocity.x *= 0.1
+                
+        if self.velocity.x > 0:
+            self.velocity.x = max(self.velocity.x - 0.1, 0)
+        else:
+            self.velocity.x = min(self.velocity.x + 0.1, 0)
     
-    def draw(self, canvas, camera):
-        canvas.blit(self.sprite, self.rect.move(camera))
+    def render(self, surf, camera):
+        if abs(self.dashing) <= 50:
+            super().render(surf, camera)
     
     
