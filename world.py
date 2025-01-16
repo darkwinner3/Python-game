@@ -1,16 +1,18 @@
-import pygame, json, sys
-from tile import Tile
+import pygame
+from tilemap import Tilemap
 from player import Player
 from npc import NPC
 
 class World:
-    def __init__(self, screen, display, level_data):
+    def __init__(self, game, screen, display, level_data):
         self.level_data = level_data
         self.levels = self.level_data['levels']
         self.player = pygame.sprite.GroupSingle()
+        self.game = game
+        
+        
         
         self.loaded_levels = []
-        self.tiles_by_level = {}
         self.current_level = None
         self.level = None
         self.player_data = None
@@ -31,34 +33,29 @@ class World:
     def run(self):
         self.display.fill(self.SKYCOLOR)
         
-        if self.player.sprite:
-            player = self.player.sprite
-            tiles = [tile for level_id, level_tiles in self.tiles_by_level.items() for tile in level_tiles.sprites()]
-            
-            player.apply_gravity()
-            player.vertical_movement_collision(tiles)
-            player.horizontal_movement_collision(tiles)
-        
-        for level_id, level_tiles in self.tiles_by_level.items():
-                for sprite in level_tiles.sprites():
-                    sprite.update(self.x_shift, self.y_shift)
-                    
-        self.player.update()
-        self.npc.update()
-        
-        self.load_nearby_levels(self.player.sprite.rect.x, self.player.sprite.rect.y, self.display)
+        self.player_world_rect = self.player.sprite.rect()
         
         map_left, map_right, map_top, map_bottom = self.calculate_map_boundaries()
         
         if self.player:
             camera = self.upate_camera(map_left, map_right, map_top, map_bottom)
             
-        self.load_map(camera)
+            self.player.sprite.update(self.tilemap, (self.player.sprite.movement[1] - self.player.sprite.movement[0], 0))
+            
+        print(self.player.sprite.movement[1])
         
-        # Draw player if present
-        if self.player:
-            self.player.sprite.draw(self.display, camera)
-
+        self.npc.update()
+        
+        self.load_nearby_levels(self.player_world_rect.x, self.player_world_rect.y, self.display)
+        
+        self.tilemap.render(self.display, camera)
+        
+        self.player.sprite.render(self.display, camera)
+        
+        # for level in self.loaded_levels:
+        #     level_id = level['identifier']
+        #     print(f"Loaded level: {level_id}")
+        
         # Draw NPCs if they exist
         if self.npc:
             self.npc.sprite.draw(self.display, camera)
@@ -83,22 +80,23 @@ class World:
         return map_left, map_right, map_top, map_bottom
     
     def upate_camera(self, map_left, map_right, map_top, map_bottom):
-        camera_x = -self.player.sprite.rect.centerx + self.display.get_rect().centerx
+        camera_x = -self.player_world_rect.centerx + self.display.get_rect().centerx
         
-        if self.player.sprite.rect.centerx < map_left + self.display.get_rect().centerx:
+        if self.player_world_rect.centerx < map_left + self.display.get_rect().centerx:
             camera_x = -map_left
-        if self.player.sprite.rect.centerx > map_right - self.display.get_rect().centerx:
+        if self.player_world_rect.centerx > map_right - self.display.get_rect().centerx:
             camera_x = -(map_right - self.display.get_rect().width)
                 
-        camera_y = -self.player.sprite.rect.centery + self.display.get_rect().centery
+        camera_y = -self.player_world_rect.centery + self.display.get_rect().centery
             
-        if self.player.sprite.rect.centery < map_top + self.display.get_rect().centery:
+        if self.player_world_rect.centery < map_top + self.display.get_rect().centery:
             camera_y = -map_top
-        if self.player.sprite.rect.centery > map_bottom - self.display.get_rect().centery:
+        if self.player_world_rect.centery > map_bottom - self.display.get_rect().centery:
             camera_y = -(map_bottom - self.display.get_rect().height)
                 
         return (camera_x, camera_y)
-            
+    
+    # NEEDS TO BE FIXED
     def load_nearby_levels(self, player_x, player_y, display, range_x = 24577, range_y = 12289):
         # unlaod levels based on player position
         self.loaded_levels = [level for level in self.loaded_levels if self.is_within_range(level, player_x, player_y, range_x, range_y)]
@@ -110,16 +108,20 @@ class World:
             if self.is_within_range(level, player_x, player_y, range_x, range_y) and level not in self.loaded_levels:
                 self.load_level(level, display)
             if player_x >= level['worldX'] and player_y >= level['worldY']:
-                self.current_level = level 
+                self.current_level = level # Update the current level based on the player's position
+                self.tilemap.current_level = self.current_level['identifier']
+                # print(self.tilemap.current_level)
+                # self.tilemap.load_tilemap()
+                
         # Now, unload levels that are no longer within range
-        for level_id, level_tiles in list(self.tiles_by_level.items()):
+        for level_id, level_tiles in list(self.tilemap.tiles_by_level.items()):
             if not self.is_within_range(self.get_level_by_id(level_id), player_x, player_y, range_x, range_y) and level_id != current_level_id:
                 level_tiles.empty()  # Unload tiles by emptying the sprite group
-                del self.tiles_by_level[level_id]
-
+                del self.tilemap.tiles_by_level[level_id]
+    # NEEDS TO BE FIXED
     def get_level_by_id(self, level_id):
         return next((level for level in self.levels if level['identifier'] == level_id), None)
-    
+    # NEEDS TO BE FIXED
     def is_within_range(self, level, player_x, player_y, range_x, range_y):
         level_x, level_y = level['worldX'], level['worldY']
         return abs(level_x - player_x) <= range_x and abs(level_y - player_y) <= range_y
@@ -129,8 +131,28 @@ class World:
         
         self.current_level = current_level
         
+        self.tilemap = Tilemap(self.game, self.current_level['identifier'])
+        
         self.load_level(self.current_level, display)
-    
+        
+    def setup_level(self, display):
+        level_id = self.level['identifier']
+        
+        if level_id not in self.tilemap.tiles_by_level:
+         
+            self.tilemap.load_from_layer(self.level, level_id)
+            
+            self.load_entities()
+        else:
+            self.load_entities()
+        if level_id == self.current_level['identifier']:
+            self.tilemap.current_level = level_id
+            self.tilemap.load_tilemap()
+        
+
+        self.SKYCOLOR = (135, 206, 235)
+        
+        
     def load_level(self, level, display):
         print(f"Current level fddfd after change: {self.current_level['identifier']}")
         self.level = level
@@ -138,28 +160,9 @@ class World:
         
         print(f"Player initial world position: ({self.player_initial_world_x}, {self.player_initial_world_y})")
         print(f"Player rect after creation: {self.player.sprite.rect}")
-        self.loaded_levels.append(level)    
-
-    def extract_animation_data(self, animation_entity, tileset_path):
-        frames = []
-        for frame_data in animation_entity["fieldInstances"][0]["__value"]:
-            frames.append({
-                "x": frame_data["x"],
-                "y": frame_data["y"],
-                "w": frame_data["w"],
-                "h": frame_data["h"],
-            })
-        
-        rate = next((field["__value"] for field in animation_entity["fieldInstances"] if field["__identifier"] == "animation_rate"), 1)
-        mode = next((field["__value"] for field in animation_entity["fieldInstances"] if field["__identifier"] == "animationMode"), "Loop")  
-        
-        return {
-            "tileset_path": tileset_path,
-            "frames": frames,
-            "rate": rate,
-            "mode": mode
-        }
-          
+        if level not in self.loaded_levels:
+            self.loaded_levels.append(level)
+    
     def load_entities(self):
         
         self.npc = pygame.sprite.GroupSingle()
@@ -188,15 +191,6 @@ class World:
                 self.player_initial_x, self.player_initial_y = 0, 0
                 self.size = (0, 0)
             
-            animation_data = None
-            if self.player_animation_entity:
-                animation_path = next(
-                    (tileset.get("relPath") for tileset in self.level_data.get("defs", {}).get("tilesets", []) if tileset.get("identifier") == "Animation"),
-                    None
-                )
-                if animation_path:
-                    animation_data = self.extract_animation_data(self.player_animation_entity, animation_path)
-                    
             if self.npc_data:
                 self.npc_initial_x, self.npc_initial_y = self.npc_data["px"]
                 self.npc_width = self.npc_data.get("width", 0)
@@ -213,8 +207,8 @@ class World:
         
         if self.player.sprite:
         # Use the current world position of the player
-            world_x = self.player.sprite.rect.x
-            world_y = self.player.sprite.rect.y
+            world_x = self.player_world_rect.x
+            world_y = self.player_world_rect.y
         else:
             # Default to the initial spawn position
             world_x = self.player_initial_world_x
@@ -224,49 +218,15 @@ class World:
         local_y = world_y - self.current_level['worldY']
         
         if not self.player.sprite:  # Only create a new player if one doesn't already exist
-            player = Player(local_x, local_y, world_x, world_y, self.player_size, self.Is_Spawned, animation_data)
+            player = Player(self.game, (local_x, local_y), (world_x, world_y), self.player_size, self.Is_Spawned)
             self.player.add(player)
             
         if self.npc_data:
             npc = NPC(self.npc_initial_x, self.npc_initial_y, character_spritesheet_path, self.npc_size)
             self.npc.add(npc)
             
-    def setup_level(self, display):
-        level_id = self.level['identifier']
-        
-        print("false")
-        if level_id not in self.tiles_by_level:
-            print("true")
-            tiles = self.load_tiles()
-            
-            self.load_entities()
-            self.tiles_by_level[level_id] = tiles
-        else:
-            print("true")
-            self.load_entities()
-
-        self.SKYCOLOR = (135, 206, 235)  
-    
     def draw(self, screen):
         screen.blit(self.display, (0, 0))
-        
-    def load_map(self, camera):
-        
-        for level_id, level_tiles in self.tiles_by_level.items():
-                for sprite in level_tiles.sprites():
-                    sprite.draw(self.display, camera)
-    
-    def load_tiles(self):
-        self.tile_layer = next(layer for layer in self.level['layerInstances'] if layer['__identifier'] == 'Tiles')
-        self.autoTile_layer = next(layer for layer in self.level['layerInstances'] if layer['__identifier'] == 'IntGrid')
-        self.tileset_image = pygame.image.load(self.tile_layer['__tilesetRelPath']).convert_alpha()
-        self.autoTileset_image = pygame.image.load(self.autoTile_layer['__tilesetRelPath']).convert_alpha()
-        
-        world_offset = (self.level['worldX'], self.level['worldY'])
-        
-        tiles = Tile.load_from_layer(self.tile_layer, self.autoTile_layer, self.tileset_image, self.autoTileset_image, world_offset)
-        
-        return tiles
 
     def update_resolution(self, width, height, screen):
         self.screen = screen
