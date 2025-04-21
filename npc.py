@@ -1,13 +1,19 @@
 import pygame
+from physicsEntity import PhysicsEntity
 
-class NPC(pygame.sprite.Sprite):
-    def __init__(self, x, y, sprite_image, size):
-        super().__init__()
-        self.sprite = pygame.image.load(sprite_image)
-        self.sprite = pygame.transform.scale(self.sprite, size)
-        self.rect = self.sprite.get_rect(topleft=(x, y))
+class NPC(PhysicsEntity, pygame.sprite.Sprite):
+    def __init__(self, game, local_pos, world_pos, size):
+        super().__init__(game, 'npc', world_pos, size, local_pos)
+        pygame.sprite.Sprite.__init__(self)
     
-    def draw(self, canvas, camera):
-        canvas.blit(self.sprite, self.rect.move(camera))
+    # def update(self, tilemap):
+    #     super().update(tilemap)
+        
+    #     self.set_action('idle')
+    
+    def render(self, surf, camera):
+        self.animation = pygame.transform.scale(self.animation, (64, 128))
+        
+        surf.blit(self.animation, (self.pos[0] + camera[0], self.pos[1] + camera[1]))
     
     
