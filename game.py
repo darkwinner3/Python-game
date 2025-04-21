@@ -28,6 +28,7 @@ class Game():
         self.assets = {
             'player': load_image('characterSprite.png'),
             'player/idle': Animation(load_tileset_images('Player/Animation.png', self.level_data), img_dur=1),
+            'npc/idle': load_image('characterSprite.png')
         }
 
         # level init
