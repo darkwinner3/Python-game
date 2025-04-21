@@ -6,7 +6,7 @@ class Player(PhysicsEntity, pygame.sprite.Sprite):
         super().__init__(game, 'player', world_pos, size, local_pos)
         pygame.sprite.Sprite.__init__(self)
         
-        self.speed_increment = 2.2
+        self.speed_increment = 2
         self.air_time = 0
         self.doubleJump = True
         self.jumping = False
@@ -43,11 +43,15 @@ class Player(PhysicsEntity, pygame.sprite.Sprite):
             self.velocity.y = -self.jump_speed
             self.air_time = 5.5
             self.jumping = True
+            print(self.current_jumps)
         elif self.doubleJump and self.current_jumps < self.max_jumps:  # Player is airborne
             self.current_jumps += 1
             self.velocity.y = -self.jump_speed
             self.air_time = 5.5
             self.jumping = True
+            print(self.current_jumps)
+            
+        
             
             
     
@@ -98,7 +102,7 @@ class Player(PhysicsEntity, pygame.sprite.Sprite):
             
         self.handle_input()
         
-        # print(self.current_jumps)
+        self.set_action('idle')
         
         if self.dashing > 0:
             self.dashing = max(0, self.dashing - 1)
