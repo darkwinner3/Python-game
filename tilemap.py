@@ -1,37 +1,31 @@
-import pygame
+import pygame, math
 from tile import Tile
 
 PHYSICS_TILES = {'solid', 'stone'}
 
-# NEIGHBOR_OFFSETS = [
-#     (-64, -64), (0, -64), (64, -64), (128, -64),
-#     (-64,  0),                   (128,  0),
-#     (-64, 64),                    (128,  64),
-#     (-64,  128), (0,  128), (64, 128),  (128,  128)
-# ]
+character_width = 63
+character_height = 125
+tile_width = 64
+tile_height = 64
 
-# NEIGHBOR_OFFSETS = [
-#     (-1, -1), (-1, 0), (-1, 1),
-#     (0, -1),          (0, 1),
-#     (1, -1),  (1, 0),  (1, 1)
-#     ]
+half_width_in_tiles = math.ceil(character_width / 2 / tile_width)
+half_height_in_tiles = math.ceil(character_height / 2 / tile_height)
 
-
-NEIGHBOR_OFFSETS = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (0, 0), (-1, 1), (0, 1), (1, 1)]
-
-
-# NEIGHBOR_OFFSETS = [
-#     (-2, -2), (-2, 0), (-2, 2),
-#     (0, -2),          (0, 2),
-#     (2, -2),  (2, 0),  (2, 2)
-#     ]
+NEIGHBOR_OFFSETS = []
+for dy in range(-half_height_in_tiles, half_height_in_tiles + 2):
+    for dx in range(-half_width_in_tiles, half_width_in_tiles + 1):
+        NEIGHBOR_OFFSETS.append((dx, dy))
+        
+# [(-1, -1), (0, -1), (1, -1),
+#  (-1,  0), (0,  0), (1,  0),
+#  (-1,  1), (0,  1), (1,  1),
+#  (-1,  2), (0,  2), (1,  2)]
 
 class Tilemap(pygame.sprite.Sprite):
-    def __init__(self, game, current_level=None):
+    def __init__(self, game):
         super().__init__()
         
         self.tiles_by_level = {}
-        self.current_level = current_level
         self.tilemap = {}
         
         self.game = game
@@ -73,9 +67,9 @@ class Tilemap(pygame.sprite.Sprite):
         
         return tiles
     
-    def load_tilemap(self):
+    def load_tilemap(self, current_level):
         self.tilemap = {}
-        for tile in self.tiles_by_level[self.current_level]:
+        for tile in self.tiles_by_level[current_level]:
             self.tilemap[(tile.pos[0] // self.tile_size, tile.pos[1] // self.tile_size)] = tile
     
     def load_from_layer(self, level, level_id):
