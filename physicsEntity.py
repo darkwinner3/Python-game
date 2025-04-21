@@ -72,8 +72,5 @@ class PhysicsEntity():
         self.animation.update()
         
     def render(self, surf,  camera):
-        rect = self.rect()
-        # print(pygame.transform.flip(self.animation.img(), self.flip, False), (self.pos[0], self.pos[1]))
-        # surf.blit(pygame.transform.flip(self.animation.img(), self.flip, False), (self.pos[0] - camera[0] + self.anim_offset[0], self.pos[1] - camera[1] + self.anim_offset[1]))
-        surf.blit(pygame.transform.flip(self.animation.img(), self.flip, False), rect.move(camera))
+        surf.blit(pygame.transform.flip(self.animation.img(), self.flip, False), (self.pos[0] + camera[0], self.pos[1] + camera[1]))
         
